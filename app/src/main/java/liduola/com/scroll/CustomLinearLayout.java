@@ -1,31 +1,29 @@
 package liduola.com.scroll;
 
-import android.animation.ValueAnimator;
 import android.content.Context;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.VelocityTracker;
 import android.view.View;
-import android.view.animation.DecelerateInterpolator;
 import android.widget.LinearLayout;
+import android.widget.Scroller;
 
 /**
- * 兼容滚动的控件
+ * 兼容滚动的控件,其中child1与child2组成所有内容.
  */
 public class CustomLinearLayout extends LinearLayout {
     public static final String TAG = "CustomLinearLayout";
 
-    private int mLastY;
-    private int mCurrentY;
+    private int mLastRawY; //手指上一次的位置
+    private int mCurrentRawY; //本次手指的位置
     private View mChild1;
     private View mChild2;
-    private int mChildScrollY = 0;
-    private int mPointerId;
-    private int mDeltaY;
-    VelocityTracker mVelocityTracker;
-
-
+    private int mScrollY = 0; //内容滑动的距离
+    private int mDeltaY; //表示通过内容滚动,从而往下显示的距离
+    private VelocityTracker mVelocityTracker;
+    private Scroller mScroller;
+    private Context mContext;
 
     public CustomLinearLayout(Context context) {
         super(context);
@@ -33,6 +31,7 @@ public class CustomLinearLayout extends LinearLayout {
 
     public CustomLinearLayout(Context context, AttributeSet attrs) {
         super(context, attrs);
+        init(context);
     }
 
     public CustomLinearLayout(Context context, AttributeSet attrs, int defStyleAttr) {
@@ -47,9 +46,13 @@ public class CustomLinearLayout extends LinearLayout {
 
     }
 
+    private void init(Context context) {
+        mContext = context;
+    }
     private void initData() {
         mChild1 = getChildAt(0);
         mChild2 = getChildAt(1);
+        mScroller = new Scroller(mContext);
     }
 
     @Override
@@ -60,33 +63,36 @@ public class CustomLinearLayout extends LinearLayout {
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        if (mVelocityTracker == null) {
-            mVelocityTracker = VelocityTracker.obtain();
-            mVelocityTracker.addMovement(event);
-
-        }
-
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
-                mLastY = (int) event.getRawY();
-                mPointerId = event.getPointerId(0);
+                if (mVelocityTracker == null) {
+                    mVelocityTracker = VelocityTracker.obtain();
+                }
+                mVelocityTracker.addMovement(event);
+                mLastRawY = (int) event.getRawY();
+                mScroller.forceFinished(true);
                 break;
             case MotionEvent.ACTION_MOVE:
-                mCurrentY = (int) event.getRawY();
-                mDeltaY = mCurrentY - mLastY;
-                mLastY = mCurrentY;
+                if (mVelocityTracker == null) {
+                    mVelocityTracker = VelocityTracker.obtain();
+                }
+                mVelocityTracker.addMovement(event);
+                mCurrentRawY = (int) event.getRawY();
+                mDeltaY = -(mCurrentRawY - mLastRawY);//当手指往下滑时,内容需要往上显示.
+                mLastRawY = mCurrentRawY;
                 scrollBy(mDeltaY);
-
+                Log.d(TAG, "deltaY:" + mDeltaY);
                 break;
             case MotionEvent.ACTION_UP:
 
-                fling(mDeltaY );
-                mLastY = 0;
-                mCurrentY = 0;
-
+                mLastRawY = 0;
+                mCurrentRawY = 0;
                 mVelocityTracker.computeCurrentVelocity(1000);
                 int yVelocity = (int) mVelocityTracker.getYVelocity();
                 Log.d(TAG, "yVelocity : " + yVelocity);
+                mScroller.forceFinished(true);
+                mScroller.fling(0, mScrollY, 0, -yVelocity, 0,
+                        0, -8000, 8000);
 
                 mVelocityTracker.clear();
                 mVelocityTracker.recycle();
@@ -95,8 +101,26 @@ public class CustomLinearLayout extends LinearLayout {
             default:
 
         }
+        invalidate();
         return true;
     }
+
+
+    @Override
+    public void computeScroll() {
+        if (mScroller.computeScrollOffset()) {
+            scrollTo(mScroller.getCurrY());
+            Log.d(TAG, "mScroller.getCurrY():" + mScroller.getCurrY());
+            postInvalidate();
+        }
+    }
+
+
+    private void scrollTo(int destY) {
+        scrollBy(destY - mScrollY);
+    }
+
+
 
     /**
      *
@@ -106,49 +130,50 @@ public class CustomLinearLayout extends LinearLayout {
         Log.v(TAG, "topMargin: " + params.topMargin);
         Log.v(TAG, "height: " + params.height);
         Log.v(TAG, "deltaY: " + deltaY);
-        Log.v(TAG, "scrollY: " + mChildScrollY);
-        if (deltaY < 0) {
-            if (params.topMargin < -params.height) {
-                mChild2.scrollBy(0, -deltaY);
-                mChildScrollY = mChildScrollY - deltaY;
-            } else {
-                params.topMargin += deltaY;
+        Log.v(TAG, "scrollY: " + mScrollY);
+        if (deltaY > 0) { // 内容往下显示
+            if (params.topMargin <= -params.height) { //如果child1 完全隐藏了,滑动child2.
+                mChild2.scrollBy(0, deltaY);
+                Log.d(TAG, "mChild2.getScrollY: " + mChild2.getScrollY());
+                mScrollY = mScrollY + deltaY;
+                // TODO: 1/26/16  
+            } else if(params.topMargin > -params.height ) { //如果child1 没有完全显示,移动child1
+                params.topMargin -= deltaY;
+                mScrollY += deltaY;
+                if(params.topMargin < -params.height){ //如果滑动之后会 child1 会移动过多,进行修正.
+                    params.topMargin = -params.height;
+                    mScrollY = params.height;
+                }
                 Log.v(TAG, "else topMargin: " + params.topMargin);
                 requestLayout();
             }
-        } else if (deltaY > 0) {
-            if (mChildScrollY > 0) {
-                mChild2.scrollBy(0, -deltaY);
-                mChildScrollY = mChildScrollY - deltaY;
-            } else {
-                params.topMargin += deltaY;
+        } else if (deltaY < 0) { // 内容往上显示
+            if (mScrollY - params.height > 0) {  // 如果 child2 没有滑到顶,就滑动child2.
+                mChild2.scrollBy(0, deltaY);
+                mScrollY += deltaY;
+                if(mScrollY - params.height < 0){ //如果 child2 的滑动记录值小于0了,修正为0.
+                    int reviseY = mScrollY - params.height;
+                    mScrollY = params.height;
+                    scrollBy(reviseY);
+                }
+            } else if( params.topMargin <= 0) {//如果child2 已经滑到顶,并且child1 没到顶,移动child1
+                Log.d(TAG, "topMargin: " + params.topMargin);
+                params.topMargin -= deltaY;
+                mScrollY += deltaY;
+                if (params.topMargin > 0) { //如果child1过多的下移,与顶部产生间距了,修正topMargin为0.
+                    params.topMargin = 0;
+                    mScrollY = 0;
+                }
                 requestLayout();
             }
-            
+
         }
 
+
+
     }
 
-    private void fling(final int lastDeltaY) {
-        ValueAnimator animator = ValueAnimator.ofInt(0, 1).setDuration(Math.abs(lastDeltaY * 5));
-        animator.setInterpolator(new DecelerateInterpolator());
-        animator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
-            private float lastFraction = 0;
 
-            @Override
-            public void onAnimationUpdate(ValueAnimator animation) {
-                float fraction = animation.getAnimatedFraction();
-                int deltaY = (int) (-lastDeltaY * Math.abs(lastDeltaY)/10* (fraction -
-                        lastFraction));
-                lastFraction = fraction;
-                scrollBy(-deltaY);
-                Log.v(TAG, "fraction: " + fraction);
-
-
-            }
-        });
-        animator.start();
-    }
 
 
 }

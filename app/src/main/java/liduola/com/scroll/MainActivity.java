@@ -51,7 +51,7 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public int getItemCount() {
-                return 100;
+                return 20;
             }
 
             class ViewHolders extends RecyclerView.ViewHolder {
