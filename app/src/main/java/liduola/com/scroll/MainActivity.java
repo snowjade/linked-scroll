@@ -34,8 +34,8 @@ public class MainActivity extends AppCompatActivity {
             }
 
             @Override
-            public void scrollBy(int deltaY) {
-                mRecyclerView.scrollBy(0,deltaY);
+            public void scrollTo(int y) {
+                mRecyclerView.scrollBy(0,y - mScrollY);
             }
         });
         mUpPart = (RelativeLayout) findViewById(R.id.upPart);
@@ -65,7 +65,7 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public int getItemCount() {
-                return 200;
+                return 20;
             }
 
             class ViewHolders extends RecyclerView.ViewHolder {
