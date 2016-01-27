@@ -18,12 +18,12 @@ public class CustomLinearLayout extends LinearLayout {
     private int mLastRawY; //手指上一次的位置
     private int mCurrentRawY; //本次手指的位置
     private View mChild1;
-    private View mChild2;
     private int mScrollY = 0; //内容滑动的距离
     private int mDeltaY; //表示通过内容滚动,从而往下显示的距离
     private VelocityTracker mVelocityTracker;
     private Scroller mScroller;
     private Context mContext;
+    private Child2 mChild2;
 
     public CustomLinearLayout(Context context) {
         super(context);
@@ -51,8 +51,11 @@ public class CustomLinearLayout extends LinearLayout {
     }
     private void initData() {
         mChild1 = getChildAt(0);
-        mChild2 = getChildAt(1);
         mScroller = new Scroller(mContext);
+    }
+
+    public void setChild2(Child2 child2) {
+        mChild2 = child2;
     }
 
     @Override
@@ -92,7 +95,7 @@ public class CustomLinearLayout extends LinearLayout {
                 Log.d(TAG, "yVelocity : " + yVelocity);
                 mScroller.forceFinished(true);
                 mScroller.fling(0, mScrollY, 0, -yVelocity, 0,
-                        0, -8000, 8000);
+                        0, -Integer.MAX_VALUE, Integer.MAX_VALUE);
 
                 mVelocityTracker.clear();
                 mVelocityTracker.recycle();
@@ -133,10 +136,10 @@ public class CustomLinearLayout extends LinearLayout {
         Log.v(TAG, "scrollY: " + mScrollY);
         if (deltaY > 0) { // 内容往下显示
             if (params.topMargin <= -params.height) { //如果child1 完全隐藏了,滑动child2.
-                mChild2.scrollBy(0, deltaY);
+                mChild2.scrollBy(deltaY);
                 Log.d(TAG, "mChild2.getScrollY: " + mChild2.getScrollY());
-                mScrollY = mScrollY + deltaY;
-                // TODO: 1/26/16  
+                mScrollY = mChild2.getScrollY() + params.height;
+                // TODO: 1/26/16
             } else if(params.topMargin > -params.height ) { //如果child1 没有完全显示,移动child1
                 params.topMargin -= deltaY;
                 mScrollY += deltaY;
@@ -148,8 +151,8 @@ public class CustomLinearLayout extends LinearLayout {
                 requestLayout();
             }
         } else if (deltaY < 0) { // 内容往上显示
-            if (mScrollY - params.height > 0) {  // 如果 child2 没有滑到顶,就滑动child2.
-                mChild2.scrollBy(0, deltaY);
+            if (mChild2.getScrollY() > 0) {  // 如果 child2 没有滑到顶,就滑动child2.
+                mChild2.scrollBy(deltaY);
                 mScrollY += deltaY;
                 if(mScrollY - params.height < 0){ //如果 child2 的滑动记录值小于0了,修正为0.
                     int reviseY = mScrollY - params.height;
@@ -171,6 +174,11 @@ public class CustomLinearLayout extends LinearLayout {
 
 
 
+    }
+
+    public interface Child2{
+        int getScrollY();
+        void scrollBy(int deltaY);
     }
 
 
