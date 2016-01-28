@@ -6,7 +6,6 @@ import android.util.Log;
 import android.view.MotionEvent;
 import android.view.VelocityTracker;
 import android.widget.LinearLayout;
-import android.widget.ScrollView;
 import android.widget.Scroller;
 
 /**
@@ -96,15 +95,12 @@ public class CustomLinearLayout extends LinearLayout {
     public boolean onTouchEvent(MotionEvent event) {
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
-                if (mVelocityTracker == null) {
-                    mVelocityTracker = VelocityTracker.obtain();
-                    Log.d(TAG, "tracker obtain");
-                }
-                mVelocityTracker.addMovement(event);
+                Log.d(TAG, "TouchEvent action down");
                 mLastRawY = (int) event.getRawY();
                 mScroller.forceFinished(true);
                 break;
             case MotionEvent.ACTION_MOVE:
+                Log.v(TAG, "TouchEvent action move");
                 if (mVelocityTracker == null) {
                     mVelocityTracker = VelocityTracker.obtain();
                     Log.d(TAG, "tracker obtain");
@@ -115,24 +111,28 @@ public class CustomLinearLayout extends LinearLayout {
                 mLastRawY = mCurrentRawY;
                 int destY = mChild2.getScrollY() - mChild1Params.topMargin + deltaY;
                 scrollTo(destY);
-                Log.d(TAG, "destY:" + destY);
+                Log.v(TAG, "destY:" + destY);
                 break;
             case MotionEvent.ACTION_UP:
+                Log.d(TAG, "TouchEvent action up");
 
                 mLastRawY = 0;
                 mCurrentRawY = 0;
                 Log.d(TAG, "tracker use");
-                mVelocityTracker.computeCurrentVelocity(1000);
-                int yVelocity = (int) mVelocityTracker.getYVelocity();
-                Log.d(TAG, "yVelocity : " + yVelocity);
-                mScroller.forceFinished(true);
-                mScroller.fling(0, mChild2.getScrollY() - mChild1Params.topMargin, 0, -yVelocity, 0,
-                        0, -Integer.MAX_VALUE, Integer.MAX_VALUE);
+                if (mVelocityTracker != null) {
+                    mVelocityTracker.computeCurrentVelocity(1000);
+                    int yVelocity = (int) mVelocityTracker.getYVelocity();
+                    Log.d(TAG, "yVelocity : " + yVelocity);
+                    mScroller.forceFinished(true);
+                    mScroller.fling(0, mChild2.getScrollY() - mChild1Params.topMargin, 0,
+                            -yVelocity, 0,
+                            0, -Integer.MAX_VALUE, Integer.MAX_VALUE);
+                    mVelocityTracker.clear();
+                    mVelocityTracker.recycle();
+                    mVelocityTracker = null;
+                    Log.d(TAG, "tracker clear");
+                }
 
-                mVelocityTracker.clear();
-                mVelocityTracker.recycle();
-                mVelocityTracker = null;
-                Log.d(TAG, "tracker clear");
                 break;
             default:
 
@@ -146,7 +146,7 @@ public class CustomLinearLayout extends LinearLayout {
     public void computeScroll() {
         if (mScroller.computeScrollOffset()) {
             scrollTo(mScroller.getCurrY());
-            Log.d(TAG, "mScroller.getCurrY():" + mScroller.getCurrY());
+            Log.v(TAG, "mScroller.getCurrY():" + mScroller.getCurrY());
             postInvalidate();
         }
     }
