@@ -95,7 +95,7 @@ public class ViewPagerActivity extends AppCompatActivity {
 
                 @Override
                 public int getItemCount() {
-                    return 20;
+                    return 200;
                 }
 
                 class ViewHolders extends RecyclerView.ViewHolder {

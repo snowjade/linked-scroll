@@ -16,7 +16,7 @@
             android:layout_height="300dp"
             android:background="@android:color/holo_green_dark">
 
-            <TextView
+            <Button
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/big_up"

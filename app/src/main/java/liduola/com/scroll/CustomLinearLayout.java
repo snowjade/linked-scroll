@@ -48,11 +48,12 @@ public class CustomLinearLayout extends LinearLayout {
 
     private void init(Context context) {
         mContext = context;
+        mScroller = new Scroller(mContext);
+
     }
 
     private void initData() {
         mChild1Params = (LayoutParams) getChildAt(0).getLayoutParams();
-        mScroller = new Scroller(mContext);
     }
 
     public void setChild2(Child2 child2) {
@@ -125,8 +126,7 @@ public class CustomLinearLayout extends LinearLayout {
                     Log.d(TAG, "yVelocity : " + yVelocity);
                     mScroller.forceFinished(true);
                     mScroller.fling(0, mChild2.getScrollY() - mChild1Params.topMargin, 0,
-                            -yVelocity, 0,
-                            0, -Integer.MAX_VALUE, Integer.MAX_VALUE);
+                            -yVelocity, Integer.MIN_VALUE, Integer.MAX_VALUE, Integer.MIN_VALUE, Integer.MAX_VALUE);
                     mVelocityTracker.clear();
                     mVelocityTracker.recycle();
                     mVelocityTracker = null;
